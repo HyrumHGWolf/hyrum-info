@@ -98,14 +98,10 @@ export default function Sky() {
       <CometTrail finePointer={finePointer} reducedMotion={reducedMotion} />
 
       <div className={"hint" + (hintGone ? " is-gone" : "")} aria-hidden="true">
-        Brighter stars hold stories — click one
+        Brighter stars hold stories — {finePointer ? "click" : "tap"} one
       </div>
 
-      <Panel
-        content={activeContent}
-        reducedMotion={reducedMotion}
-        onClose={closePanel}
-      />
+      <Panel content={activeContent} onClose={closePanel} />
 
       <Footer />
     </>

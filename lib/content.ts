@@ -5,9 +5,10 @@
 //   • Change any text below freely.
 //   • `node` ties a story to a star in lib/figure.ts (e.g. "n31"). To move a
 //     story onto a different star, change `node`. To make `connectsTo` glow,
-//     the two stars must share an edge in figure.ts.
-//   • `section` sets the color: motivations → gold, iic → electric blue,
-//     background → silver. `size` sets brightness: largest|large|medium|small.
+//     the two stars must share an edge in figure.ts (checked at load; a dev
+//     console warning fires if they don't).
+//   • `section` sets which legend category the story is grouped and
+//     filtered under. All story stars render in the same blue.
 //   • Array order = keyboard tab order.
 //   • Footer is SOCIAL_LINKS + BIRTH_ISO at the bottom.
 // ============================================================================
@@ -15,12 +16,11 @@
 import type { StarContent, SocialLink } from "./types";
 
 export const STARS: StarContent[] = [
-  // ---- MOTIVATIONS (gold) — the flag & banner --------------------------------
+  // ---- MOTIVATIONS — the flag & banner ---------------------------------------
   {
     id: "title",
     node: "n0",
     section: "motivations",
-    size: "largest",
     name: "Title of Liberty",
     subtitle: "The Book of Mormon",
     meta: "Alma 46:12",
@@ -33,7 +33,6 @@ export const STARS: StarContent[] = [
     id: "cosmism",
     node: "n53",
     section: "motivations",
-    size: "largest",
     name: "Cosmism",
     subtitle: "Cosmist",
     meta: "2025–Present",
@@ -46,7 +45,6 @@ export const STARS: StarContent[] = [
     id: "christianity",
     node: "n46",
     section: "motivations",
-    size: "medium",
     name: "Christianity",
     subtitle: "Believer",
     meta: "2004–Present",
@@ -59,7 +57,6 @@ export const STARS: StarContent[] = [
     id: "church",
     node: "n45",
     section: "motivations",
-    size: "medium",
     name: "The Church",
     subtitle: "Member",
     meta: "2004–Present",
@@ -69,30 +66,28 @@ export const STARS: StarContent[] = [
     connectsTo: ["christianity"],
   },
 
-  // ---- IMMORTALITY INDUSTRIAL COMPLEX (electric blue) — head, hands, body -----
+  // ---- IMMORTALIST INDUSTRIAL COMPLEX — head, hands, body ---------------------
   {
     id: "cryopets",
     node: "n31",
     section: "iic",
-    size: "largest",
     name: "Cryopets",
     subtitle: "Cryopreservation Service Provider",
     meta: "Head of Growth Operations · 2025–Present",
     body:
       "Cryopets is building cryopreservation services for pets, with the goal of ending pet death. After his longtime friend Kai Micah Mills founded the company, Hyrum left Pennsylvania and moved to Texas to help build Cryopets' first official lab and early operating base. He joined, and since joining has helped the company through its first raise, securing its first facility, and fully relocating its founding team. As Head of Growth, Hyrum has worked across growth, media, partnerships, customer acquisition, public messaging, and early operational systems. Cryopets has raised millions of dollars from venture capital firms including Valyrian, Prelude, and Zee Prime Capital. The company represents Hyrum's central operating role in the fight against biological decay, beginning with pets and scaling toward broader whole-body cryopreservation, with the goal of ending human death.",
     link: { text: "cryopets.com", url: "https://cryopets.com" },
-    connectsTo: ["perfuslation"],
+    connectsTo: ["persufflation"],
   },
   {
-    id: "perfuslation",
+    id: "persufflation",
     node: "n30",
     section: "iic",
-    size: "medium",
-    name: "Perfuslation",
+    name: "Persufflation",
     subtitle: "Cryopets Research Project",
     meta: "Lab Assistant · 2026–Present",
     body:
-      "Perfuslation is a research project focused on organ cryopreservation and revival through advanced perfusion-based techniques. Working alongside Cryopets' scientific leadership, Hyrum supports early development of the project as part of his transition from growth and operations into more direct technical contribution. The project reflects his broader aim to help turn biostasis from a speculative field into an engineering discipline with practical milestones.",
+      "Persufflation is a research project focused on organ cryopreservation and revival through advanced perfusion-based techniques. Working alongside Cryopets' scientific leadership, Hyrum supports early development of the project as part of his transition from growth and operations into more direct technical contribution. The project reflects his broader aim to help turn biostasis from a speculative field into an engineering discipline with practical milestones.",
     link: null,
     connectsTo: ["cryopets"],
   },
@@ -100,7 +95,6 @@ export const STARS: StarContent[] = [
     id: "hydradao",
     node: "n29",
     section: "iic",
-    size: "large",
     name: "HydraDAO",
     subtitle: "Replacement Research",
     meta: "Growth · 2024–Present",
@@ -113,7 +107,6 @@ export const STARS: StarContent[] = [
     id: "dowellbio",
     node: "n24",
     section: "iic",
-    size: "small",
     name: "Dowell Bio",
     subtitle: "HydraDAO-Funded Research",
     meta: "Investor",
@@ -126,7 +119,6 @@ export const STARS: StarContent[] = [
     id: "cryodao",
     node: "n34",
     section: "iic",
-    size: "large",
     name: "CryoDAO",
     subtitle: "Cryopreservation Research",
     meta: "Growth · 2024–Present",
@@ -139,7 +131,6 @@ export const STARS: StarContent[] = [
     id: "cryorat",
     node: "n35",
     section: "iic",
-    size: "medium",
     name: "CryoRat",
     subtitle: "CryoDAO Program",
     meta: "Growth · 2024–Present",
@@ -152,7 +143,6 @@ export const STARS: StarContent[] = [
     id: "abf",
     node: "n37",
     section: "iic",
-    size: "large",
     name: "ABF",
     subtitle: "Biostasis Facility",
     meta: "Growth · 2025–Present",
@@ -162,38 +152,35 @@ export const STARS: StarContent[] = [
     connectsTo: [],
   },
 
-  // ---- BACKGROUND (silver) — at the feet -------------------------------------
+  // ---- BACKGROUND — at the feet -----------------------------------------------
   {
     id: "mission",
     node: "n16",
     section: "background",
-    size: "medium",
     name: "Mission, UT",
     subtitle: "Missionary",
     meta: "2022–2024",
     body:
       "Hyrum submitted his papers and left to serve a two-year mission for The Church of Jesus Christ of Latter-day Saints in the late spring of 2022. He was called to the Utah Salt Lake City Mission, where his assigned areas included Holladay, Murray, and Cottonwood Heights. At times, he served across areas covering up to 20 congregations. His mission developed his love for church history, apologetics, public speaking, discipline, and direct outreach. During this period, he also met Kai Micah Mills, who later became his friend, colleague, and founder of Cryopets.",
     link: null,
-    connectsTo: ["byu"],
+    connectsTo: [],
   },
   {
     id: "byu",
     node: "n19",
     section: "background",
-    size: "small",
     name: "BYU",
     subtitle: "Mechanical Engineering",
     meta: "Spring 2022",
     body:
       "After graduating high school early, Hyrum attended a single semester at one of the BYU campuses as a declared Mechanical Engineering major before leaving to serve a two-year mission for his church. During this time, he became disillusioned with the conventional academic path, but gained a lasting love for the arts and humanities from a professor he admired. Though he did not continue formal university study, this period helped shape his interest in first principles, civilization, history, and the human condition.",
     link: null,
-    connectsTo: ["mission"],
+    connectsTo: [],
   },
   {
     id: "freemasonry",
     node: "n15",
     section: "background",
-    size: "small",
     name: "Freemasonry",
     subtitle: "Fraternity",
     meta: "Master Mason · 2025–Present",
@@ -207,12 +194,13 @@ export const STARS: StarContent[] = [
 // ---- Footer -----------------------------------------------------------------
 // Set each url; use "" to hide a row. For email use a mailto: url.
 export const SOCIAL_LINKS: SocialLink[] = [
-  { platform: "x", url: "https://x.com/hyrumwolf?s=11" },
+  { platform: "x", url: "https://x.com/hyrumwolf" },
   { platform: "linkedin", url: "https://www.linkedin.com/in/hyrum-wolf-313512280/" },
- // { platform: "youtube", url: "#" }, // PLACEHOLDER — YouTube URL
-  { platform: "instagram", url: "https://www.instagram.com/hyrum_wolf?utm_source=qr" }, // PLACEHOLDER — Instagram URL
+  // { platform: "youtube", url: "" }, // add a YouTube URL to show the icon
+  { platform: "instagram", url: "https://www.instagram.com/hyrum_wolf" },
   { platform: "email", url: "hyrum@cryopets.com" },
 ];
 
-// The moment the "days into eternity" counter starts ticking.
-export const BIRTH_ISO = "2004-04-21T00:00:00";
+// The moment the "days into eternity" counter starts ticking. Anchored to
+// US Mountain Time so the count doesn't shift with the viewer's timezone.
+export const BIRTH_ISO = "2004-04-21T00:00:00-06:00";

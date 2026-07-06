@@ -1,15 +1,12 @@
 export type Section = "motivations" | "iic" | "background";
-export type SizeTier = "largest" | "large" | "medium" | "small";
 
 export interface StarContent {
   /** Unique key; also used as the panel/anchor id. */
   id: string;
   /** Which figure node (from lib/figure.ts) this story lives on. */
   node: string;
-  /** Sets the star + accent color. */
+  /** Legend category this story is grouped and filtered under. */
   section: Section;
-  /** Sets the star radius / brightness. */
-  size: SizeTier;
   /** Headline + hover label. */
   name: string;
   /** Small role/category line under the title. */

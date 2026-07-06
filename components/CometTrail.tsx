@@ -19,12 +19,17 @@ export default function CometTrail({ finePointer, reducedMotion }: Props) {
     const svg = svgRef.current;
     if (!svg) return;
 
+    // All comet DOM lives in one group we own, so cleanup can remove it
+    // without disturbing the React-rendered <defs>.
+    const layer = document.createElementNS(SVG_NS, "g");
+    svg.appendChild(layer);
+
     const head = document.createElementNS(SVG_NS, "circle");
     head.setAttribute("class", "comet-head");
     head.setAttribute("r", "5");
     head.setAttribute("fill", "url(#dust)");
     head.setAttribute("opacity", "0");
-    svg.appendChild(head);
+    layer.appendChild(head);
 
     let lx: number | null = null;
     let ly: number | null = null;
@@ -53,7 +58,7 @@ export default function CometTrail({ finePointer, reducedMotion }: Props) {
             Math.min(3, 1.2 + dist * 0.05).toFixed(2)
           );
           seg.setAttribute("stroke-linecap", "round");
-          svg.appendChild(seg);
+          layer.appendChild(seg);
           const anim = seg.animate([{ opacity: 0.7 }, { opacity: 0 }], {
             duration: 430,
             easing: "ease-out",
@@ -69,7 +74,7 @@ export default function CometTrail({ finePointer, reducedMotion }: Props) {
     return () => {
       clearTimeout(idleHide);
       window.removeEventListener("pointermove", onMove);
-      svg.replaceChildren(svg.querySelector("defs") as Node);
+      layer.remove();
     };
   }, [finePointer, reducedMotion]);
 

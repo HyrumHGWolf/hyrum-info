@@ -8,13 +8,12 @@ const ACCENT = "#bcd6ff";
 
 interface Props {
   content: StarContent | null;
-  reducedMotion: boolean;
   onClose: () => void;
 }
 
 /** Side panel (desktop) / bottom sheet (mobile). Real modal: focus is trapped
  *  while open, Escape and backdrop-click close it, focus is handled by Sky. */
-export default function Panel({ content, reducedMotion, onClose }: Props) {
+export default function Panel({ content, onClose }: Props) {
   // Keep the last content mounted through the slide-out transition.
   const [shown, setShown] = useState<StarContent | null>(content);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -61,8 +60,9 @@ export default function Panel({ content, reducedMotion, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="panel-title"
-      aria-hidden={!open}
-      hidden={!open && reducedMotion}
+      /* inert removes the closed (off-screen) panel from the tab order and
+         the accessibility tree while still allowing the slide transition. */
+      inert={!open}
       onKeyDown={onKeyDown}
     >
       <button className="panel-close" aria-label="Close panel" onClick={onClose}>

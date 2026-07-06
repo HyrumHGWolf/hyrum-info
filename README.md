@@ -40,14 +40,15 @@ Open [`lib/content.ts`](lib/content.ts). Each story is one entry:
 {
   id: "cryopets",
   node: "n31",              // which star it sits on (see lib/figure.ts)
-  section: "iic",           // motivations → gold | iic → blue | background → silver
-  size: "largest",          // largest | large | medium | small
+  section: "iic",           // legend category: motivations | iic | background
   name: "Cryopets",
   subtitle: "Cryopreservation Service Provider",
   meta: "Head of Growth · 2025–Present",
   body: "…",
   link: { text: "cryopets.com", url: "https://cryopets.com" }, // or null
-  connectsTo: ["perfuslation"], // glows the line between the two stars (they must share an edge)
+  connectsTo: ["persufflation"], // glows the line between the two stars — they
+                                // must share an edge in figure.ts (a dev
+                                // console warning fires if they don't)
 }
 ```
 

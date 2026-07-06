@@ -35,22 +35,15 @@ export function useFinePointer(): boolean {
   return fine;
 }
 
-/** Window size, tracked on resize (debounced). 0×0 until mounted. */
-export function useWindowSize(): { w: number; h: number } {
-  const [size, setSize] = useState({ w: 0, h: 0 });
+/** True below the mobile breakpoint (matches the CSS @media max-width: 640px). */
+export function useIsMobile(): boolean {
+  const [mobile, setMobile] = useState(false);
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-    const update = () => setSize({ w: window.innerWidth, h: window.innerHeight });
-    const onResize = () => {
-      clearTimeout(t);
-      t = setTimeout(update, 150);
-    };
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => setMobile(mq.matches);
     update();
-    window.addEventListener("resize", onResize);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("resize", onResize);
-    };
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
-  return size;
+  return mobile;
 }
