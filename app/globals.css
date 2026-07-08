@@ -315,7 +315,9 @@ body {
 .star--interactive .sparkle {
   display: block;
   transform: scale(0.62);
-  animation: sparkle-twinkle var(--pulse-dur, 6s) ease-in-out
+  /* 2.2x the base pulse duration for a slow breathe; per-star --pulse-dur and
+     --pulse-delay keep them out of sync. */
+  animation: sparkle-twinkle calc(var(--pulse-dur, 6s) * 2.2) ease-in-out
     var(--pulse-delay, 0s) infinite;
 }
 /* The core keeps its geometry (labels and taps measure it) but yields the
@@ -332,13 +334,19 @@ body {
   animation: none;
   opacity: 1;
 }
+/* Idle twinkle: gently breathe the sparkle from its resting size (0.62) down
+   a touch and back, with a soft opacity shimmer. Each star's --pulse-dur and
+   --pulse-delay are randomized per node (see Constellation.tsx) so they twinkle
+   out of sync. */
 @keyframes sparkle-twinkle {
   0%,
   100% {
-    opacity: 0.55;
+    transform: scale(0.62);
+    opacity: 1;
   }
   50% {
-    opacity: 1;
+    transform: scale(0.38);
+    opacity: 0.65;
   }
 }
 
