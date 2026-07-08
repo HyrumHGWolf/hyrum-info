@@ -301,17 +301,45 @@ body {
   stroke-dasharray: 3 3;
 }
 
-/* Selected star: the round core morphs into the sparkle, same blue color. */
+/* The four-point sparkle. Every clickable star wears it small with a gentle,
+   staggered twinkle — a "click me" beacon. The selected star grows it to
+   full size. */
 .sparkle {
   display: none;
   color: #dcebff;
   pointer-events: none;
+  /* Scales around the star center: the <use> is centered on the origin of
+     its positioning group (see Constellation.tsx). */
+  transition: transform 0.35s ease, opacity 0.3s ease;
+}
+.star--interactive .sparkle {
+  display: block;
+  transform: scale(0.62);
+  animation: sparkle-twinkle var(--pulse-dur, 6s) ease-in-out
+    var(--pulse-delay, 0s) infinite;
+}
+/* The core keeps its geometry (labels and taps measure it) but yields the
+   visual to the sparkle. */
+.star--interactive .core {
+  opacity: 0;
 }
 .star.is-active .core {
   display: none;
 }
 .star.is-active .sparkle {
   display: block;
+  transform: scale(1);
+  animation: none;
+  opacity: 1;
+}
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 #sky.is-dimmed .star:not(.is-active) {
@@ -713,6 +741,13 @@ html.reduce-motion .nebula {
 html.reduce-motion .star {
   animation-name: twinkle-soft;
   animation-duration: 8s;
+}
+html.reduce-motion .sparkle {
+  animation: none;
+  transition: none;
+}
+html.reduce-motion .star--interactive .sparkle {
+  opacity: 0.85;
 }
 @keyframes twinkle-soft {
   from {

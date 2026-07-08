@@ -336,14 +336,21 @@ export default function Constellation({
                   }}
                 />
                 {isHot && (
-                  <use
-                    className="sparkle"
-                    href="#sel-sparkle"
-                    x={(n.x - SPARKLE_W / 2).toFixed(2)}
-                    y={(n.y - SPARKLE_H / 2).toFixed(2)}
-                    width={SPARKLE_W}
-                    height={SPARKLE_H.toFixed(2)}
-                  />
+                  /* The <use> is centered on the local origin inside a group
+                     translated to the star, so the CSS scale (small ↔ full
+                     size) always happens around the star's center. Scaling
+                     the <use> directly would also scale its x/y placement,
+                     dragging the sparkle toward the viewBox origin. */
+                  <g transform={`translate(${n.x} ${n.y})`}>
+                    <use
+                      className="sparkle"
+                      href="#sel-sparkle"
+                      x={(-SPARKLE_W / 2).toFixed(2)}
+                      y={(-SPARKLE_H / 2).toFixed(2)}
+                      width={SPARKLE_W}
+                      height={SPARKLE_H.toFixed(2)}
+                    />
+                  </g>
                 )}
                 {isHot && (
                   <circle
