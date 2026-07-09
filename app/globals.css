@@ -301,10 +301,15 @@ body {
   stroke-dasharray: 3 3;
 }
 
-/* Visited stars keep their twinkling sparkle but shed the glow — a quiet mark
-   of where the visitor has already been. Overrides the hover/focus glow too. */
-.star--visited .halo {
+/* Visited stars shed the sparkle and settle back into a plain glowing dot —
+   a quiet mark of where the visitor has already been. The doubled class keeps
+   these ahead of the .star--interactive sparkle/core rules below (while a star
+   is open, .is-active still wins, so its sparkle stays grown). */
+.star--interactive.star--visited .sparkle {
   display: none;
+}
+.star--interactive.star--visited .core {
+  opacity: 1;
 }
 
 /* The four-point sparkle. Every clickable star wears it small with a gentle,
