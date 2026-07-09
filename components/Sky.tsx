@@ -41,6 +41,10 @@ export default function Sky() {
     setActiveId(null);
   }, []);
 
+  // Collapse the legend category without touching the story panel. Used by the
+  // mobile legend sheet's close button and when tapping a star from it.
+  const closeSection = useCallback(() => setActiveSection(null), []);
+
   // Clicking the empty sky clears the highlight, collapses the menu, and
   // closes the panel.
   const closeAll = useCallback(() => {
@@ -82,6 +86,7 @@ export default function Sky() {
         activeSection={activeSection}
         activeId={activeId}
         onSelectSection={selectSection}
+        onCloseSection={closeSection}
         onSelectStar={openStar}
       />
 

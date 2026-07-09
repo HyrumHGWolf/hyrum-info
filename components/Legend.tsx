@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { STARS } from "@/lib/content";
 import type { Section, StarContent } from "@/lib/types";
+import { useIsMobile } from "./hooks";
 
 const CATEGORIES: { key: Section; label: string }[] = [
   { key: "motivations", label: "Motivations" },
@@ -14,17 +15,21 @@ interface Props {
   activeSection: Section | null;
   activeId: string | null;
   onSelectSection: (section: Section) => void;
+  onCloseSection: () => void;
   onSelectStar: (content: StarContent) => void;
 }
 
 /** Left-side legend + filter. Clicking a category highlights its stars and
- *  drops down their names; clicking a name opens that story. */
+ *  reveals their names — an inline dropdown on desktop, a slide-up bottom
+ *  sheet on mobile. Clicking a name opens that story. */
 export default function Legend({
   activeSection,
   activeId,
   onSelectSection,
+  onCloseSection,
   onSelectStar,
 }: Props) {
+  const isMobile = useIsMobile();
   const bySection = useMemo(() => {
     const map = new Map<Section, StarContent[]>();
     STARS.forEach((s) => {
@@ -53,21 +58,41 @@ export default function Legend({
                 {c.label}
               </button>
               {expanded && (
-                <ul className="legend-sub">
-                  {stars.map((s) => (
-                    <li key={s.id}>
-                      <button
-                        type="button"
-                        className={
-                          "legend-star" + (activeId === s.id ? " is-active" : "")
-                        }
-                        onClick={() => onSelectStar(s)}
-                      >
-                        {s.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="legend-sheet">
+                  {/* Header only shows on the mobile bottom sheet. */}
+                  <div className="legend-sheet-head">
+                    <span className="legend-sheet-title">{c.label}</span>
+                    <button
+                      type="button"
+                      className="legend-sheet-close"
+                      aria-label="Close"
+                      onClick={onCloseSection}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <ul className="legend-sub">
+                    {stars.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          className={
+                            "legend-star" +
+                            (activeId === s.id ? " is-active" : "")
+                          }
+                          onClick={() => {
+                            onSelectStar(s);
+                            // Two bottom sheets can't share the screen — on
+                            // mobile, opening a story closes the legend sheet.
+                            if (isMobile) onCloseSection();
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </li>
           );
