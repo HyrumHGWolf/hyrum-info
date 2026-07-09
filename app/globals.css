@@ -302,11 +302,16 @@ body {
 }
 
 /* Visited stars shed the sparkle and settle back into a plain glowing dot —
-   a quiet mark of where the visitor has already been. The doubled class keeps
-   these ahead of the .star--interactive sparkle/core rules below (while a star
-   is open, .is-active still wins, so its sparkle stays grown). */
+   a quiet mark of where the visitor has already been. Rather than hiding the
+   sparkle outright, we shrink it to nothing (scale 0 + fade) so that when a
+   star's panel closes it animates down from the grown sparkle into the dot,
+   via the .sparkle transition. The doubled class keeps these ahead of the
+   .star--interactive rules below; .is-active is later still, so an open star's
+   sparkle stays grown until it closes. */
 .star--interactive.star--visited .sparkle {
-  display: none;
+  opacity: 0;
+  transform: scale(0);
+  animation: none;
 }
 .star--interactive.star--visited .core {
   opacity: 1;
@@ -332,12 +337,15 @@ body {
     var(--pulse-delay, 0s) infinite;
 }
 /* The core keeps its geometry (labels and taps measure it) but yields the
-   visual to the sparkle. */
+   visual to the sparkle. It fades in as the sparkle shrinks away on close. */
 .star--interactive .core {
   opacity: 0;
+  transition: opacity 0.4s ease;
 }
+/* Kept invisible (not display:none) while open so it can transition to the
+   visible visited dot once the panel closes. */
 .star.is-active .core {
-  display: none;
+  opacity: 0;
 }
 .star.is-active .sparkle {
   display: block;
@@ -596,6 +604,12 @@ body {
   opacity: 1;
 }
 
+/* The sheet header (title + close) is mobile-only; on desktop the expanded
+   names are a plain inline dropdown, so it stays hidden. */
+.legend-sheet-head {
+  display: none;
+}
+
 /* Dropdown of star names under an expanded category. */
 .legend-sub {
   list-style: none;
@@ -735,6 +749,67 @@ body {
   .legend-item {
     font-size: 0.86rem;
   }
+  /* Expanded category names rise from the bottom as a sheet, matching the
+     star story panel, instead of dropping down inline. */
+  .legend-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    padding: 1.4rem 1.6rem 2rem;
+    background: var(--panel-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(150, 180, 235, 0.5);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.55);
+    animation: legend-sheet-up 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes legend-sheet-up {
+    from {
+      transform: translateY(105%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  .legend-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .legend-sheet-title {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    color: #eef3ff;
+  }
+  .legend-sheet-close {
+    background: none;
+    border: none;
+    color: rgba(206, 220, 245, 0.7);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.1rem 0.4rem;
+  }
+  .legend-sheet-close:active {
+    color: var(--star-hot);
+  }
+  /* Inside the sheet the names are a roomy, tappable list, not an indented
+     dropdown. */
+  .legend-sub {
+    margin: 0;
+    padding-left: 0;
+    gap: 0.9rem;
+    animation: none;
+  }
+  .legend-star {
+    font-size: 1.15rem;
+    padding: 0.15rem 0;
+  }
   .eternity {
     left: 0;
     right: 0;
@@ -783,6 +858,7 @@ html.reduce-motion .star--interactive .halo {
 html.reduce-motion .panel {
   transition: none;
 }
-html.reduce-motion .legend-sub {
+html.reduce-motion .legend-sub,
+html.reduce-motion .legend-sheet {
   animation: none;
 }
