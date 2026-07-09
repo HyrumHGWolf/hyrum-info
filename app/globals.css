@@ -301,6 +301,12 @@ body {
   stroke-dasharray: 3 3;
 }
 
+/* Visited stars keep their twinkling sparkle but shed the glow — a quiet mark
+   of where the visitor has already been. Overrides the hover/focus glow too. */
+.star--visited .halo {
+  display: none;
+}
+
 /* The four-point sparkle. Every clickable star wears it small with a gentle,
    staggered twinkle — a "click me" beacon. The selected star grows it to
    full size. */

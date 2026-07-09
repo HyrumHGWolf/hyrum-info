@@ -55,6 +55,9 @@ interface Props {
   finePointer: boolean;
   activeId: string | null;
   activeSection: Section | null;
+  /** Story ids already opened this visit — these keep the sparkle but lose
+   *  their glow. */
+  visited: ReadonlySet<string>;
   onOpen: (content: StarContent) => void;
   onBackgroundClick: () => void;
 }
@@ -63,6 +66,7 @@ export default function Constellation({
   finePointer,
   activeId,
   activeSection,
+  visited,
   onOpen,
   onBackgroundClick,
 }: Props) {
@@ -281,6 +285,7 @@ export default function Constellation({
             const className =
               "star" +
               (isHot ? " star--interactive" : "") +
+              (isHot && visited.has(content.id) ? " star--visited" : "") +
               (activeId === content?.id ? " is-active" : "") +
               (isMatch ? " star--match" : "");
 

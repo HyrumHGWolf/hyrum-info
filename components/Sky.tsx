@@ -17,11 +17,15 @@ export default function Sky() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [hintGone, setHintGone] = useState(false);
+  // Stars whose stories have been opened this visit — they keep the sparkle
+  // but lose their glow, so the sky shows where you've already been.
+  const [visited, setVisited] = useState<ReadonlySet<string>>(new Set());
   const lastFocused = useRef<HTMLElement | null>(null);
 
   const openStar = useCallback((content: StarContent) => {
     lastFocused.current = document.activeElement as HTMLElement;
     setActiveId(content.id);
+    setVisited((v) => (v.has(content.id) ? v : new Set(v).add(content.id)));
     setHintGone(true);
   }, []);
 
@@ -91,6 +95,7 @@ export default function Sky() {
         finePointer={finePointer}
         activeId={activeId}
         activeSection={activeSection}
+        visited={visited}
         onOpen={openStar}
         onBackgroundClick={closeAll}
       />
