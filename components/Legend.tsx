@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { TOUR_ORDER } from "@/lib/content";
 import type { Section, StarContent } from "@/lib/types";
-import { useIsMobile } from "./hooks";
 
 const CATEGORIES: { key: Section; label: string; short?: string }[] = [
   { key: "motivations", label: "Motivations" },
@@ -15,6 +14,7 @@ interface Props {
   stars: StarContent[];
   activeSection: Section | null;
   activeId: string | null;
+  isMobile: boolean;
   onSelectSection: (section: Section) => void;
   onCloseSection: () => void;
   onSelectStar: (content: StarContent) => void;
@@ -44,17 +44,18 @@ function fadeWheel(port: HTMLElement) {
 /** Left-side legend + filter. Clicking a category highlights its stars and
  *  reveals their names as an inline dropdown. I.I.C. uses a short left-hand
  *  wheel so the long list does not cover the constellation. */
-export default function Legend({
+function Legend({
   stars,
   activeSection,
   activeId,
+  isMobile,
   onSelectSection,
   onSelectStar,
 }: Props) {
-  const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
+  const paintRaf = useRef(0);
   const iicOpen = activeSection === "iic";
 
   const paintWheel = useCallback(() => {
@@ -71,6 +72,14 @@ export default function Legend({
     thumb.style.height = `${height}%`;
     thumb.style.top = `${(scrollTop / travel) * (100 - height)}%`;
   }, []);
+
+  const schedulePaint = useCallback(() => {
+    if (paintRaf.current) return;
+    paintRaf.current = window.requestAnimationFrame(() => {
+      paintRaf.current = 0;
+      paintWheel();
+    });
+  }, [paintWheel]);
 
   useEffect(() => {
     if (!iicOpen || !isMobile) return;
@@ -104,6 +113,8 @@ export default function Legend({
     port.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => {
       window.cancelAnimationFrame(id);
+      window.cancelAnimationFrame(paintRaf.current);
+      paintRaf.current = 0;
       port.removeEventListener("wheel", onWheel);
       port.removeEventListener("touchstart", onTouchStart);
       port.removeEventListener("touchmove", onTouchMove);
@@ -168,7 +179,7 @@ export default function Legend({
                   <div
                     className="legend-wheel-scroll"
                     ref={scrollRef}
-                    onScroll={paintWheel}
+                    onScroll={schedulePaint}
                   >
                     <ul className="legend-sub legend-sub--wheel">
                       {stars.map((s) => (
@@ -205,3 +216,5 @@ export default function Legend({
     </aside>
   );
 }
+
+export default memo(Legend);

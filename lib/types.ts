@@ -13,8 +13,9 @@ export interface StarContent {
   subtitle: string;
   /** Optional role/date/reference line. */
   meta?: string;
-  /** Paragraph shown in the detail panel. */
-  body: string;
+  /** Panel prose. Usually loaded lazily from lib/storyBodies.ts so the
+   *  first JS chunk stays small — may be empty until the panel opens. */
+  body?: string;
   /** Optional portrait shown between the header and the body.
    *  `objectPosition` (CSS, e.g. "center top") pins which part of a tall
    *  photo stays in the crop so a head isn't cut off. */

@@ -12,14 +12,16 @@ import "./globals.css";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
-  weight: ["500", "600"],
+  weight: ["500"],
   variable: "--font-serif",
   display: "swap",
 });
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["400", "500"],
+  // 400 regular + italic covers body, tagline, hint, and panel copy.
+  // Heavier weights were barely used and cost extra font files.
+  weight: ["400"],
   style: ["normal", "italic"],
   variable: "--font-body",
   display: "swap",

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const COOL_TINTS = ["#eef4ff", "#eef4ff", "#dfe9ff", "#cfe0ff", "#ffe9cf"];
 const LAYER_DEPTH = [0.25, 0.55, 1];
-const LAYER_DENSITY = [2.2, 1.5, 1.0]; // stars per 10k px²
+/** Stars per 10k px² — original rich field. */
+const LAYER_DENSITY = [2.2, 1.5, 1.0];
+/** Soft ceiling only so ultra-wide monitors don't explode the SVG count. */
+const LAYER_CAP = [520, 380, 280];
 const PARALLAX = 14;
 const AMBIENT = 6;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -18,7 +21,7 @@ interface Props {
 /** Full-viewport procedural starfield: three depth layers that parallax with
  *  the cursor (or drift on their own), plus periodic shooting stars. Purely
  *  decorative, generated on the client so it never causes hydration drift. */
-export default function BackgroundField({ reducedMotion, finePointer }: Props) {
+function BackgroundField({ reducedMotion, finePointer }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -41,8 +44,10 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
       const M = 140;
       layers.forEach((layer, i) => {
         layer.textContent = "";
-        const count = Math.round(
-          (((W + 2 * M) * (H + 2 * M)) / 10000) * LAYER_DENSITY[i]
+        const area = ((W + 2 * M) * (H + 2 * M)) / 10000;
+        const count = Math.min(
+          LAYER_CAP[i],
+          Math.round(area * LAYER_DENSITY[i])
         );
         for (let n = 0; n < count; n++) {
           const c = document.createElementNS(SVG_NS, "circle");
@@ -63,12 +68,13 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
     }
     populate();
 
-    // --- Parallax / drift loop -------------------------------------------------
     let tgtX = 0;
     let tgtY = 0;
     let curX = 0;
     let curY = 0;
     let raf = 0;
+    let running = false;
+    const lastTx = ["", "", ""];
     const t0 = performance.now();
 
     const onMouse = (e: MouseEvent) => {
@@ -80,6 +86,7 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
     }
 
     function frame(now: number) {
+      if (!running) return;
       const t = (now - t0) / 1000;
       curX += (tgtX - curX) * 0.05;
       curY += (tgtY - curY) * 0.05;
@@ -87,16 +94,33 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
       const ay = Math.cos(t * 0.037) * AMBIENT * 0.7;
       layers.forEach((layer, i) => {
         const d = LAYER_DEPTH[i];
-        layer.setAttribute(
-          "transform",
-          `translate(${((curX + ax) * d).toFixed(2)} ${((curY + ay) * d).toFixed(2)})`
-        );
+        const next = `translate(${((curX + ax) * d).toFixed(2)} ${((curY + ay) * d).toFixed(2)})`;
+        if (next !== lastTx[i]) {
+          lastTx[i] = next;
+          layer.setAttribute("transform", next);
+        }
       });
       raf = requestAnimationFrame(frame);
     }
-    if (!reducedMotion) raf = requestAnimationFrame(frame);
 
-    // --- Shooting stars --------------------------------------------------------
+    function startLoop() {
+      if (reducedMotion || running || document.hidden) return;
+      running = true;
+      raf = requestAnimationFrame(frame);
+    }
+    function stopLoop() {
+      running = false;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    }
+
+    const onVisibility = () => {
+      if (document.hidden) stopLoop();
+      else startLoop();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    startLoop();
+
     let shootTimer: ReturnType<typeof setTimeout> | undefined;
     function shoot() {
       if (!document.hidden) {
@@ -136,7 +160,6 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
     }
     if (!reducedMotion) shootTimer = setTimeout(shoot, rand(4000, 9000));
 
-    // --- Resize ----------------------------------------------------------------
     let resizeTimer: ReturnType<typeof setTimeout>;
     const onResize = () => {
       clearTimeout(resizeTimer);
@@ -145,14 +168,17 @@ export default function BackgroundField({ reducedMotion, finePointer }: Props) {
     window.addEventListener("resize", onResize);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
       clearTimeout(shootTimer);
       clearTimeout(resizeTimer);
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibility);
       svg.replaceChildren();
     };
   }, [reducedMotion, finePointer]);
 
   return <svg id="bg-sky" ref={svgRef} aria-hidden="true" xmlns={SVG_NS} />;
 }
+
+export default memo(BackgroundField);

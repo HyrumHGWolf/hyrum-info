@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { SECRET_NODE, SECRET_NODE_Y_MOBILE, STARS, TOUR_ORDER } from "@/lib/content";
+import { emitTrail } from "@/lib/trailPool";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -87,7 +88,7 @@ interface Props {
  *  already matching it, so the whole tour reads as one continuous flight.
  *
  *  Pure overlay — never intercepts clicks, and sits out under reduced motion. */
-export default function GuideComet({
+function GuideComet({
   activeId,
   unlocked,
   reducedMotion,
@@ -130,6 +131,8 @@ export default function GuideComet({
 
     const head = document.createElementNS(SVG_NS, "circle");
     head.setAttribute("class", "guide-head");
+    head.setAttribute("cx", "0");
+    head.setAttribute("cy", "0");
     head.setAttribute("r", String(HEAD_R));
     head.setAttribute("fill", "url(#guide-dust)");
     head.setAttribute("opacity", "0");
@@ -139,6 +142,8 @@ export default function GuideComet({
     // fighting the head's CSS opacity transition.
     const flash = document.createElementNS(SVG_NS, "circle");
     flash.setAttribute("class", "guide-flash");
+    flash.setAttribute("cx", "0");
+    flash.setAttribute("cy", "0");
     flash.setAttribute("r", String(HEAD_R));
     flash.setAttribute("fill", "url(#guide-dust)");
     flash.setAttribute("opacity", "0");
@@ -163,16 +168,39 @@ export default function GuideComet({
       return false;
     });
 
-    /** Live screen center of a story star. Re-read every frame so the guide
-     *  tracks the figure through window resizes. */
-    const starCenter = (storyId: string) => {
+    /** Screen centers of story stars. Cached until resize — the figure does
+     *  not move relative to the viewport (no page scroll), so remeasuring
+     *  every frame was pure layout thrash. */
+    const coreEls = new Map<string, Element>();
+    const centerCache = new Map<string, { x: number; y: number }>();
+    let secretCached: { x: number; y: number } | null = null;
+    let secretOk = false;
+
+    function invalidateCenters() {
+      centerCache.clear();
+      secretCached = null;
+      secretOk = false;
+    }
+
+    const onResize = () => invalidateCenters();
+    window.addEventListener("resize", onResize);
+
+    function starCenter(storyId: string) {
+      const hit = centerCache.get(storyId);
+      if (hit) return hit;
       const node = nodeFor.get(storyId);
       if (!node) return null;
-      const el = document.querySelector(`#sky .star[data-id="${node}"] .core`);
-      if (!el) return null;
+      let el: Element | null | undefined = coreEls.get(node);
+      if (!el || !el.isConnected) {
+        el = document.querySelector(`#sky .star[data-id="${node}"] .core`);
+        if (!el) return null;
+        coreEls.set(node, el);
+      }
       const r = el.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    };
+      const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      centerCache.set(storyId, c);
+      return c;
+    }
 
     // Strict story index — never skip a stop just because it was already read.
     let routeIndex = 0;
@@ -299,8 +327,7 @@ export default function GuideComet({
       const [x, y] = orbitPoint(c.x, c.y, 0);
       px = x;
       py = y;
-      head.setAttribute("cx", String(px));
-      head.setAttribute("cy", String(py));
+      head.setAttribute("transform", `translate(${x} ${y})`);
       lx = null;
       ly = null;
       head.setAttribute("opacity", "0.92");
@@ -355,7 +382,10 @@ export default function GuideComet({
     /** Screen position of the still-hidden Captain Moroni star — figured from
      *  the SVG viewBox so we can orbit it before the star exists in the DOM. */
     function secretCenter(): { x: number; y: number } | null {
-      const sky = document.querySelector("#sky-wrap svg#sky") as SVGSVGElement | null;
+      if (secretOk) return secretCached;
+      const sky = document.querySelector(
+        "#sky-wrap svg#sky"
+      ) as SVGSVGElement | null;
       if (!sky) return null;
       const ctm = sky.getScreenCTM();
       if (!ctm) return null;
@@ -365,7 +395,9 @@ export default function GuideComet({
         pt.y = isPhone ? SECRET_NODE_Y_MOBILE : SECRET_NODE.y;
         const p = pt.matrixTransform(ctm);
         if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
-        return { x: p.x, y: p.y };
+        secretCached = { x: p.x, y: p.y };
+        secretOk = true;
+        return secretCached;
       } catch {
         return null;
       }
@@ -441,29 +473,18 @@ export default function GuideComet({
 
     /** Move the head, laying down a fading trail segment behind it. */
     function moveTo(x: number, y: number) {
-      head.setAttribute("cx", String(x));
-      head.setAttribute("cy", String(y));
+      head.setAttribute("transform", `translate(${x} ${y})`);
       if (lx !== null && ly !== null) {
         const dist = Math.hypot(x - lx, y - ly);
         if (dist > trailMinStep) {
-          const seg = document.createElementNS(SVG_NS, "line");
-          seg.setAttribute("class", "trail");
-          seg.setAttribute("x1", String(lx));
-          seg.setAttribute("y1", String(ly));
-          seg.setAttribute("x2", String(x));
-          seg.setAttribute("y2", String(y));
-          seg.setAttribute("stroke", "#bcd8ff");
-          seg.setAttribute(
-            "stroke-width",
-            Math.min(3.4, 1.4 + dist * 0.06).toFixed(2)
-          );
-          seg.setAttribute("stroke-linecap", "round");
-          layer.appendChild(seg);
-          const anim = seg.animate([{ opacity: 0.75 }, { opacity: 0 }], {
-            duration: TRAIL_FADE_MS,
-            easing: "ease-out",
+          emitTrail({
+            x1: lx,
+            y1: ly,
+            x2: x,
+            y2: y,
+            width: Math.min(3.4, 1.4 + dist * 0.06),
+            fadeMs: TRAIL_FADE_MS,
           });
-          anim.onfinish = () => seg.remove();
         }
       }
       lx = x;
@@ -492,8 +513,7 @@ export default function GuideComet({
     /** The two comets become one: head out, burst in its place. */
     function burst(now: number) {
       head.setAttribute("opacity", "0");
-      flash.setAttribute("cx", String(px));
-      flash.setAttribute("cy", String(py));
+      flash.setAttribute("transform", `translate(${px} ${py})`);
       flash.setAttribute("r", String(HEAD_R));
       flash.setAttribute("opacity", "0.95");
       phase = "flash";
@@ -522,6 +542,11 @@ export default function GuideComet({
     }
 
     const frame = (now: number) => {
+      // Park the loop while the tab is hidden — resume on visibilitychange.
+      if (document.hidden) {
+        raf = 0;
+        return;
+      }
       raf = requestAnimationFrame(frame);
       if (!legStart) legStart = now;
       const t = now - legStart;
@@ -644,12 +669,22 @@ export default function GuideComet({
 
       // done — stop burning frames.
       cancelAnimationFrame(raf);
+      raf = 0;
     };
+
+    const onVisibility = () => {
+      if (!document.hidden && !raf && phase !== "done") {
+        raf = requestAnimationFrame(frame);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibility);
       layer.remove();
     };
   }, [reducedMotion]);
@@ -666,3 +701,5 @@ export default function GuideComet({
     </svg>
   );
 }
+
+export default memo(GuideComet);

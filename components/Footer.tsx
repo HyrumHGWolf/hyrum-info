@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { SOCIAL_LINKS, BIRTH_ISO } from "@/lib/content";
 
 const ICON_PATHS: Record<string, string> = {
@@ -22,7 +22,7 @@ const ICON_LABEL: Record<string, string> = {
   email: "Email",
 };
 
-export default function Footer() {
+function Footer() {
   const [days, setDays] = useState<number | null>(null);
 
   useEffect(() => {
@@ -63,3 +63,5 @@ export default function Footer() {
     </>
   );
 }
+
+export default memo(Footer);

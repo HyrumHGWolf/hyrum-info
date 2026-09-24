@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   EDGE_PATH,
   EDGE_OFFSET,
@@ -13,7 +13,6 @@ import type { FigureNode } from "@/lib/figure";
 import { glowPathBetween } from "@/lib/glowPath";
 import { SECRET_NODE, SECRET_NODE_Y_MOBILE } from "@/lib/content";
 import type { StarContent, Section } from "@/lib/types";
-import { useIsMobile } from "./hooks";
 
 // Every clickable star looks the same: one size, the "OG" Cryopets blue.
 // Mobile renders the figure smaller overall, so story stars get an extra bump
@@ -56,6 +55,7 @@ const viewFor = (pad: typeof PAD) =>
 interface Props {
   stars: StarContent[];
   finePointer: boolean;
+  isMobile: boolean;
   activeId: string | null;
   activeSection: Section | null;
   /** Story ids already opened this visit — these keep the sparkle but lose
@@ -65,16 +65,16 @@ interface Props {
   onBackgroundClick: () => void;
 }
 
-export default function Constellation({
+function Constellation({
   stars,
   finePointer,
+  isMobile,
   activeId,
   activeSection,
   visited,
   onOpen,
   onBackgroundClick,
 }: Props) {
-  const isMobile = useIsMobile();
   const interactiveR = isMobile ? INTERACTIVE_R_MOBILE : INTERACTIVE_R;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [label, setLabel] = useState<{
@@ -413,3 +413,5 @@ export default function Constellation({
     </main>
   );
 }
+
+export default memo(Constellation);

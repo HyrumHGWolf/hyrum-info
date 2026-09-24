@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 /** True when the OS asks for reduced motion (override with ?motion in the URL). */
@@ -60,6 +60,7 @@ export function useScrollThumb(
   const [thumb, setThumb] = useState<{ top: number; height: number } | null>(
     null
   );
+  const rafRef = useRef(0);
 
   const updateThumb = useCallback(() => {
     const el = scrollRef.current;
@@ -77,6 +78,14 @@ export function useScrollThumb(
     });
   }, [scrollRef]);
 
+  const scheduleThumb = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      updateThumb();
+    });
+  }, [updateThumb]);
+
   useEffect(() => {
     const el = scrollRef.current;
     const inner = innerRef.current;
@@ -85,15 +94,17 @@ export function useScrollThumb(
       return;
     }
     updateThumb();
-    el.addEventListener("scroll", updateThumb, { passive: true });
-    const ro = new ResizeObserver(updateThumb);
+    el.addEventListener("scroll", scheduleThumb, { passive: true });
+    const ro = new ResizeObserver(scheduleThumb);
     ro.observe(el);
     if (inner) ro.observe(inner);
     return () => {
-      el.removeEventListener("scroll", updateThumb);
+      el.removeEventListener("scroll", scheduleThumb);
       ro.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
     };
-  }, [enabled, watch, updateThumb, scrollRef, innerRef]);
+  }, [enabled, watch, updateThumb, scheduleThumb, scrollRef, innerRef]);
 
   return { thumb, updateThumb };
 }

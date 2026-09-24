@@ -1,19 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import BackgroundField from "./BackgroundField";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Constellation from "./Constellation";
 import Panel from "./Panel";
-import Footer from "./Footer";
 import Legend from "./Legend";
-import CometTrail from "./CometTrail";
-import GuideComet from "./GuideComet";
 import { usePrefersReducedMotion, useFinePointer, useIsMobile } from "./hooks";
 import { SECRET_STAR, STARS, TOUR_ORDER } from "@/lib/content";
 import type { StarContent, Section } from "@/lib/types";
 
 /** Keep in sync with `.star-unlock-*` durations in app/globals.css. */
 const MORONI_UNLOCK_MS = 4200;
+
+const BackgroundField = dynamic(() => import("./BackgroundField"), {
+  ssr: false,
+});
+const TrailLayer = dynamic(() => import("./TrailLayer"), { ssr: false });
+const CometTrail = dynamic(() => import("./CometTrail"), { ssr: false });
+const GuideComet = dynamic(() => import("./GuideComet"), { ssr: false });
 
 export default function Sky() {
   const reducedMotion = usePrefersReducedMotion();
@@ -123,6 +127,15 @@ export default function Sky() {
     document.documentElement.classList.toggle("reduce-motion", reducedMotion);
   }, [reducedMotion]);
 
+  // Pause decorative CSS animations while the tab is hidden.
+  useEffect(() => {
+    const sync = () =>
+      document.documentElement.classList.toggle("is-hidden", document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+
   // Escape closes the topmost thing: the story panel first, then the legend menu.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -135,8 +148,10 @@ export default function Sky() {
   }, [activeId, activeSection, closePanel]);
 
   const unlocked = STARS.every((s) => visited.has(s.id));
-  const visibleStars =
-    unlocked && moroniRevealed ? [...STARS, SECRET_STAR] : STARS;
+  const visibleStars = useMemo(
+    () => (unlocked && moroniRevealed ? [...STARS, SECRET_STAR] : STARS),
+    [unlocked, moroniRevealed]
+  );
 
   useEffect(() => {
     if (reducedMotion && unlocked) revealMoroni();
@@ -159,11 +174,16 @@ export default function Sky() {
   // Desktop: the mouse wheel over the sky steps through the stories in tour
   // order (Moroni last once unlocked). Wheeling inside the story panel still
   // scrolls its text.
+  const tourStars = useMemo(
+    () =>
+      TOUR_ORDER.map((id) => STARS.find((s) => s.id === id)).filter(
+        (s): s is StarContent => !!s
+      ),
+    []
+  );
   const wheelOrder = useRef<StarContent[]>([]);
   wheelOrder.current = [
-    ...TOUR_ORDER.map((id) => STARS.find((s) => s.id === id)).filter(
-      (s): s is StarContent => !!s
-    ),
+    ...tourStars,
     ...(unlocked && moroniRevealed ? [SECRET_STAR] : []),
   ];
   const activeIdRef = useRef(activeId);
@@ -259,39 +279,22 @@ export default function Sky() {
 
   return (
     <>
-      {/* Nebula haze */}
-      <div className="nebula-field" aria-hidden="true">
-        <span className="nebula nebula--violet" />
-        <span className="nebula nebula--teal" />
-        <span className="nebula nebula--amber" />
-      </div>
-
       <BackgroundField reducedMotion={reducedMotion} finePointer={finePointer} />
 
       <Legend
         stars={visibleStars}
         activeSection={activeSection}
         activeId={activeId}
+        isMobile={isMobile}
         onSelectSection={selectSection}
         onCloseSection={closeSection}
         onSelectStar={openStar}
       />
 
-      <header className="site-header">
-        <span className="header-glow" aria-hidden="true" />
-        <h1 className="name">Hyrum HG Wolf</h1>
-        <p className="tagline">Cosmist &amp; Christian</p>
-        {/* Crawlable identity copy — visually hidden, not decorative spam. */}
-        <p className="sr-only">
-          Official personal site of Hyrum HG Wolf, also known as Hyrum Wolf and
-          Hyrum Graver — Cosmist and Christian. Work spanning cosmism,
-          cryopreservation, Noah Cryotechnology, Cryopets, and frontier science.
-        </p>
-      </header>
-
       <Constellation
         stars={visibleStars}
         finePointer={finePointer}
+        isMobile={isMobile}
         activeId={activeId}
         activeSection={activeSection}
         visited={visited}
@@ -299,11 +302,7 @@ export default function Sky() {
         onBackgroundClick={closeAll}
       />
 
-      <CometTrail
-        finePointer={finePointer}
-        reducedMotion={reducedMotion}
-        enabled={guideDone}
-      />
+      <TrailLayer />
 
       <GuideComet
         activeId={activeId}
@@ -316,13 +315,17 @@ export default function Sky() {
         onFinish={() => setGuideDone(true)}
       />
 
+      <CometTrail
+        finePointer={finePointer}
+        reducedMotion={reducedMotion}
+        enabled={guideDone}
+      />
+
       <div className={"hint" + (hintGone ? " is-gone" : "")} aria-hidden="true">
         Brighter stars hold stories — {finePointer ? "click" : "tap"} one
       </div>
 
       <Panel content={activeContent} onClose={closePanel} />
-
-      <Footer />
     </>
   );
 }
