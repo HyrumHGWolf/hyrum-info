@@ -625,12 +625,25 @@ html.is-hidden #sky .star--interactive .sparkle {
 .panel.is-open {
   transform: translateX(0);
 }
+/* Fixed bar above the scroll body — images never enter this layer. */
+.panel-chrome {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.85rem 0.9rem 0.15rem 1.2rem;
+  background: var(--panel-bg);
+}
 .panel-scroll {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4.5rem 2.2rem 2.2rem;
+  padding: 0.6rem 2.2rem 2.2rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -644,6 +657,7 @@ html.is-hidden #sky .star--interactive .sparkle {
   top: 50%;
   right: 0.5rem;
   bottom: auto;
+  z-index: 1;
   width: 2px;
   height: 52px;
   transform: translateY(-50%);
@@ -667,11 +681,8 @@ html.is-hidden #sky .star--interactive .sparkle {
   background: rgba(210, 226, 255, 0.4);
 }
 .panel-close {
-  position: absolute;
-  top: 1rem;
-  right: 1.2rem;
-  /* Above .panel-scroll so scrolled body never eats the X hit target. */
-  z-index: 5;
+  position: relative;
+  z-index: 1;
   background: none;
   border: none;
   color: rgba(206, 220, 245, 0.7);
@@ -679,6 +690,8 @@ html.is-hidden #sky .star--interactive .sparkle {
   line-height: 1;
   cursor: pointer;
   padding: 0.3rem 0.5rem;
+  /* Keep the tap target clear of scrolling content underneath. */
+  isolation: isolate;
 }
 .panel-close:hover,
 .panel-close:focus-visible {
@@ -1031,8 +1044,11 @@ html.is-hidden #sky .star--interactive .sparkle {
     opacity: 1;
     pointer-events: auto;
   }
+  .panel-chrome {
+    padding: 0.65rem 0.7rem 0.1rem 1.1rem;
+  }
   .panel-scroll {
-    padding: 2.8rem 1.9rem 1.6rem 1.5rem;
+    padding: 0.35rem 1.9rem 1.6rem 1.5rem;
   }
   .panel-scrollbar {
     top: 50%;

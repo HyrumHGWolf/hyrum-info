@@ -114,9 +114,16 @@ function Panel({ content, onClose }: Props) {
         inert={!open}
         onKeyDown={onKeyDown}
       >
-        <button className="panel-close" aria-label="Close panel" onClick={onClose}>
-          &times;
-        </button>
+        {/* Non-scrolling chrome so the X never sits under portrait images. */}
+        <div className="panel-chrome">
+          <button
+            className="panel-close"
+            aria-label="Close panel"
+            onClick={onClose}
+          >
+            &times;
+          </button>
+        </div>
         <div className="panel-scroll" ref={scrollRef}>
           {display && (
             <div className="panel-scroll-inner" ref={innerRef} key={display.id}>
