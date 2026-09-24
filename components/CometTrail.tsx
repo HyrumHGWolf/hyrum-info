@@ -7,15 +7,22 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 interface Props {
   finePointer: boolean;
   reducedMotion: boolean;
+  /** Held back until the guide comet has walked the whole tour and merged into
+   *  the cursor — two comets at once is one too many. */
+  enabled: boolean;
 }
 
 /** A soft cursor head with a tail that trails the motion. Fine pointers only;
  *  disabled under reduced motion. Pure overlay — never intercepts clicks. */
-export default function CometTrail({ finePointer, reducedMotion }: Props) {
+export default function CometTrail({
+  finePointer,
+  reducedMotion,
+  enabled,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!finePointer || reducedMotion) return;
+    if (!enabled || !finePointer || reducedMotion) return;
     const svg = svgRef.current;
     if (!svg) return;
 
@@ -76,7 +83,7 @@ export default function CometTrail({ finePointer, reducedMotion }: Props) {
       window.removeEventListener("pointermove", onMove);
       layer.remove();
     };
-  }, [finePointer, reducedMotion]);
+  }, [enabled, finePointer, reducedMotion]);
 
   return (
     <svg id="fx" ref={svgRef} aria-hidden="true" xmlns={SVG_NS}>

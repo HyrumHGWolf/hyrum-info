@@ -10,7 +10,8 @@ import {
   VIEWBOX,
 } from "@/lib/figure";
 import type { FigureNode } from "@/lib/figure";
-import { STARS } from "@/lib/content";
+import { glowPathBetween } from "@/lib/glowPath";
+import { SECRET_NODE, SECRET_NODE_Y_MOBILE } from "@/lib/content";
 import type { StarContent, Section } from "@/lib/types";
 import { useIsMobile } from "./hooks";
 
@@ -19,7 +20,7 @@ import { useIsMobile } from "./hooks";
 // there to stay easy to spot.
 const INTERACTIVE = { core: "#dcebff", glow: "url(#glow-blue)", label: "#bcd6ff" };
 const INTERACTIVE_R = 6.5;
-const INTERACTIVE_R_MOBILE = 9;
+const INTERACTIVE_R_MOBILE = 12;
 
 // The selected star morphs into this sparkle (Ellipse 317.svg, 612×636).
 const SPARKLE_W = 54;
@@ -28,6 +29,7 @@ const SPARKLE_H = (SPARKLE_W * 636) / 612;
 // On touch devices the scaled-down hit circles are tiny, so a tap anywhere
 // within this many screen pixels of a story star opens it (nearest wins).
 const NEAR_TAP_PX = 32;
+const NEAR_TAP_PX_MOBILE = 48;
 
 /** Stable 0..1 pseudo-random from a string, so twinkle/pulse phases survive
  *  re-renders and match between server and client (no hydration drift). */
@@ -52,6 +54,7 @@ const viewFor = (pad: typeof PAD) =>
   }`;
 
 interface Props {
+  stars: StarContent[];
   finePointer: boolean;
   activeId: string | null;
   activeSection: Section | null;
@@ -63,6 +66,7 @@ interface Props {
 }
 
 export default function Constellation({
+  stars,
   finePointer,
   activeId,
   activeSection,
@@ -85,17 +89,26 @@ export default function Constellation({
   // Story-by-node, plus the node pairs to glow when a story is hovered.
   // connectsTo pairs are validated against the figure's edge skeleton so a
   // glow line is only drawn where the line art actually connects the stars.
+  const nodes = useMemo(() => {
+    if (!stars.some((s) => s.node === SECRET_NODE.id)) return NODES;
+    if (NODES.some((n) => n.id === SECRET_NODE.id)) return NODES;
+    return [
+      ...NODES,
+      isMobile ? { ...SECRET_NODE, y: SECRET_NODE_Y_MOBILE } : SECRET_NODE,
+    ];
+  }, [stars, isMobile]);
+
   const { contentByNode, glowPairs } = useMemo(() => {
     const contentByNode = new Map<string, StarContent>();
-    STARS.forEach((s) => contentByNode.set(s.node, s));
+    stars.forEach((s) => contentByNode.set(s.node, s));
     const edgeSet = new Set(
       EDGES.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`))
     );
     const glowPairs = new Map<string, [FigureNode, FigureNode][]>();
-    STARS.forEach((s) => {
+    stars.forEach((s) => {
       const pairs: [FigureNode, FigureNode][] = [];
       (s.connectsTo ?? []).forEach((otherId) => {
-        const other = STARS.find((o) => o.id === otherId);
+        const other = stars.find((o) => o.id === otherId);
         if (!other) {
           if (process.env.NODE_ENV !== "production") {
             console.warn(`content: "${s.id}" connectsTo unknown id "${otherId}"`);
@@ -119,9 +132,10 @@ export default function Constellation({
       glowPairs.set(s.id, pairs);
     });
     return { contentByNode, glowPairs };
-  }, []);
+  }, [stars]);
 
-  const glowLines = hoveredId ? glowPairs.get(hoveredId) ?? [] : [];
+  const glowSource = hoveredId ?? activeId;
+  const glowLines = glowSource ? glowPairs.get(glowSource) ?? [] : [];
 
   // When a panel opens, the hover name is redundant — clear it so it never
   // lingers behind/after the side panel.
@@ -191,7 +205,7 @@ export default function Constellation({
           // requiring a direct hit on the (scaled-down, tiny) hit circle.
           if (!finePointer) {
             let best: { content: StarContent; d: number } | null = null;
-            for (const s of STARS) {
+            for (const s of stars) {
               const core = coreRefs.current[s.node];
               if (!core) continue;
               const r = core.getBoundingClientRect();
@@ -199,7 +213,8 @@ export default function Constellation({
                 e.clientX - (r.left + r.width / 2),
                 e.clientY - (r.top + r.height / 2)
               );
-              if (d <= NEAR_TAP_PX && (!best || d < best.d)) {
+              const tapPx = isMobile ? NEAR_TAP_PX_MOBILE : NEAR_TAP_PX;
+              if (d <= tapPx && (!best || d < best.d)) {
                 best = { content: s, d };
               }
             }
@@ -252,24 +267,31 @@ export default function Constellation({
 
         {/* Brighten the line(s) between a hovered story and its relatives. */}
         <g id="glow-lines">
-          {glowLines.map(([a, b], i) => (
-            <line
-              key={i}
-              className="edge edge--glow"
-              x1={a.x}
-              y1={a.y}
-              x2={b.x}
-              y2={b.y}
-            />
-          ))}
+          {glowLines.map(([a, b], i) => {
+            const d = glowPathBetween(a, b);
+            return d ? (
+              <path key={i} className="edge edge--glow" d={d} />
+            ) : (
+              <line
+                key={i}
+                className="edge edge--glow"
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+              />
+            );
+          })}
         </g>
 
         {/* Stars */}
         <g id="figure-stars">
-          {NODES.map((n) => {
+          {nodes.map((n) => {
             const content = contentByNode.get(n.id) ?? null;
             const isHot = !!content;
-            const coreR = isHot ? interactiveR : n.r;
+            const coreR = isHot
+              ? interactiveR * (content.larger ? 1.75 : 1)
+              : n.r;
             const style = {
               ["--tw-dur" as string]: `${(3 + hash(n.id + "d") * 4.5).toFixed(2)}s`,
               ["--tw-delay" as string]: `${(-hash(n.id + "y") * 7).toFixed(2)}s`,
@@ -285,6 +307,8 @@ export default function Constellation({
             const className =
               "star" +
               (isHot ? " star--interactive" : "") +
+              (isHot && content.larger ? " star--larger" : "") +
+              (isHot && content.id === "moroni" ? " star--unlock" : "") +
               (isHot && visited.has(content.id) ? " star--visited" : "") +
               (activeId === content?.id ? " is-active" : "") +
               (isMatch ? " star--match" : "");
@@ -346,7 +370,11 @@ export default function Constellation({
                      size) always happens around the star's center. Scaling
                      the <use> directly would also scale its x/y placement,
                      dragging the sparkle toward the viewBox origin. */
-                  <g transform={`translate(${n.x} ${n.y})`}>
+                  <g
+                    transform={`translate(${n.x} ${n.y})${
+                      content.larger ? " scale(1.75)" : ""
+                    }`}
+                  >
                     <use
                       className="sparkle"
                       href="#sel-sparkle"
@@ -362,7 +390,7 @@ export default function Constellation({
                     className="hit"
                     cx={n.x}
                     cy={n.y}
-                    r={Math.max(20, coreR + 14)}
+                    r={Math.max(isMobile ? 32 : 20, coreR + (isMobile ? 20 : 14))}
                     fill="transparent"
                   />
                 )}

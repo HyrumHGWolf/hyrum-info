@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
-import { STARS } from "@/lib/content";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { TOUR_ORDER } from "@/lib/content";
 import type { Section, StarContent } from "@/lib/types";
 import { useIsMobile } from "./hooks";
 
-const CATEGORIES: { key: Section; label: string }[] = [
+const CATEGORIES: { key: Section; label: string; short?: string }[] = [
   { key: "motivations", label: "Motivations" },
-  { key: "iic", label: "Immortalist Industrial Complex" },
   { key: "background", label: "Background" },
+  { key: "iic", label: "Immortalist Industrial Complex", short: "Work (I.I.C.)" },
 ];
 
 interface Props {
+  stars: StarContent[];
   activeSection: Section | null;
   activeId: string | null;
   onSelectSection: (section: Section) => void;
@@ -19,26 +20,111 @@ interface Props {
   onSelectStar: (content: StarContent) => void;
 }
 
+/** Fade names at the edges of the I.I.C. wheel so the list never reads as
+ *  a hard block over the figure — top ones dissolve, bottom ones arrive.
+ *  At the very bottom the last title stays full-glow so the end of the
+ *  list is obvious. */
+function fadeWheel(port: HTMLElement) {
+  const pr = port.getBoundingClientRect();
+  const band = 26;
+  const scrolled = port.scrollTop > 1;
+  const atBottom =
+    port.scrollTop + port.clientHeight >= port.scrollHeight - 2;
+  port.querySelectorAll<HTMLElement>(".legend-star").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const mid = (r.top + r.bottom) / 2;
+    let o = 1;
+    if (scrolled && mid < pr.top + band) o = (mid - pr.top) / band;
+    else if (!atBottom && mid > pr.bottom - band)
+      o = (pr.bottom - mid) / band;
+    el.style.opacity = String(Math.max(0, Math.min(1, o)));
+  });
+}
+
 /** Left-side legend + filter. Clicking a category highlights its stars and
- *  reveals their names — an inline dropdown on desktop, a slide-up bottom
- *  sheet on mobile. Clicking a name opens that story. */
+ *  reveals their names as an inline dropdown. I.I.C. uses a short left-hand
+ *  wheel so the long list does not cover the constellation. */
 export default function Legend({
+  stars,
   activeSection,
   activeId,
   onSelectSection,
-  onCloseSection,
   onSelectStar,
 }: Props) {
   const isMobile = useIsMobile();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const iicOpen = activeSection === "iic";
+
+  const paintWheel = useCallback(() => {
+    const port = scrollRef.current;
+    if (!port) return;
+    fadeWheel(port);
+    const { scrollTop, scrollHeight, clientHeight } = port;
+    const overflow = scrollHeight > clientHeight + 1;
+    barRef.current?.classList.toggle("is-visible", overflow);
+    const thumb = thumbRef.current;
+    if (!overflow || !thumb) return;
+    const travel = scrollHeight - clientHeight;
+    const height = Math.min(34, Math.max(22, (clientHeight / scrollHeight) * 100));
+    thumb.style.height = `${height}%`;
+    thumb.style.top = `${(scrollTop / travel) * (100 - height)}%`;
+  }, []);
+
+  useEffect(() => {
+    if (!iicOpen || !isMobile) return;
+    const port = scrollRef.current;
+    if (!port) return;
+    port.scrollTop = 0;
+    const id = window.requestAnimationFrame(paintWheel);
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 8;
+      else if (e.deltaMode === 2) dy *= port.clientHeight;
+      port.scrollTop += dy;
+    };
+
+    let touchY = 0;
+    let touchScroll = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0].clientY;
+      touchScroll = port.scrollTop;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      port.scrollTop = touchScroll - (e.touches[0].clientY - touchY);
+    };
+
+    port.addEventListener("wheel", onWheel, { passive: false });
+    port.addEventListener("touchstart", onTouchStart, { passive: true });
+    port.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      window.cancelAnimationFrame(id);
+      port.removeEventListener("wheel", onWheel);
+      port.removeEventListener("touchstart", onTouchStart);
+      port.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [iicOpen, isMobile, paintWheel]);
+
   const bySection = useMemo(() => {
+    const tourAt = new Map(TOUR_ORDER.map((id, i) => [id, i]));
     const map = new Map<Section, StarContent[]>();
-    STARS.forEach((s) => {
+    stars.forEach((s) => {
       const list = map.get(s.section) ?? [];
       list.push(s);
       map.set(s.section, list);
     });
+    for (const list of map.values()) {
+      list.sort(
+        (a, b) => (tourAt.get(a.id) ?? 999) - (tourAt.get(b.id) ?? 999)
+      );
+    }
     return map;
-  }, []);
+  }, [stars]);
 
   return (
     <aside className="legend" aria-label="Constellation legend and filter">
@@ -47,51 +133,69 @@ export default function Legend({
         {CATEGORIES.map((c) => {
           const expanded = activeSection === c.key;
           const stars = bySection.get(c.key) ?? [];
+          const wheel = c.key === "iic" && isMobile;
           return (
             <li key={c.key}>
               <button
                 type="button"
                 className={"legend-item" + (expanded ? " is-active" : "")}
                 aria-expanded={expanded}
+                aria-label={c.label}
                 onClick={() => onSelectSection(c.key)}
               >
-                {c.label}
+                {expanded ? c.label : (c.short ?? c.label)}
               </button>
-              {expanded && (
-                <div className="legend-sheet">
-                  {/* Header only shows on the mobile bottom sheet. */}
-                  <div className="legend-sheet-head">
-                    <span className="legend-sheet-title">{c.label}</span>
-                    <button
-                      type="button"
-                      className="legend-sheet-close"
-                      aria-label="Close"
-                      onClick={onCloseSection}
-                    >
-                      &times;
-                    </button>
+              {expanded && !wheel && (
+                <ul className="legend-sub">
+                  {stars.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        className={
+                          "legend-star" +
+                          (activeId === s.id ? " is-active" : "")
+                        }
+                        onClick={() => onSelectStar(s)}
+                      >
+                        {s.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {expanded && wheel && (
+                <div className="legend-wheel">
+                  <div
+                    className="legend-wheel-scroll"
+                    ref={scrollRef}
+                    onScroll={paintWheel}
+                  >
+                    <ul className="legend-sub legend-sub--wheel">
+                      {stars.map((s) => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            className={
+                              "legend-star" +
+                              (activeId === s.id ? " is-active" : "")
+                            }
+                            onClick={() => onSelectStar(s)}
+                          >
+                            {s.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul className="legend-sub">
-                    {stars.map((s) => (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          className={
-                            "legend-star" +
-                            (activeId === s.id ? " is-active" : "")
-                          }
-                          onClick={() => {
-                            onSelectStar(s);
-                            // Two bottom sheets can't share the screen — on
-                            // mobile, opening a story closes the legend sheet.
-                            if (isMobile) onCloseSection();
-                          }}
-                        >
-                          {s.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <div
+                    className="legend-wheel-bar"
+                    ref={barRef}
+                    aria-hidden="true"
+                  >
+                    <div className="legend-wheel-track">
+                      <div className="legend-wheel-thumb" ref={thumbRef} />
+                    </div>
+                  </div>
                 </div>
               )}
             </li>
