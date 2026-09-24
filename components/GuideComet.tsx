@@ -49,8 +49,8 @@ type Phase =
 
 interface Props {
   /** The story currently open, or null. Opening the stop the guide is on
-   *  advances it; opening a later tour stop makes the guide catch up and fly
-   *  straight there so a fast scroll does not leave it behind. */
+   *  advances it; opening the *next* tour stop (wheel/click in order) makes
+   *  the guide catch up one step. Jumping ahead via the legend does not skip. */
   activeId: string | null;
   /** True once every story star has been opened — the cue to fly to the
    *  empty sky, loop once, and summon Captain Moroni. */
@@ -74,12 +74,12 @@ interface Props {
 
 /** A second comet that leads the visitor through the stars: it appears already
  *  orbiting the first story on TOUR_ORDER, then shoots to the next stop on
- *  that path each time the current stop is opened. Opening a later stop
- *  (scroll or click) catches the guide up so it flies straight there instead
- *  of lagging one step at a time. After the last stop it flies to where
- *  Captain Moroni will appear, and as it loops the unlocked mark blooms in;
- *  halfway through that bloom the guide peels off toward the cursor and hands
- *  the trail to CometTrail.
+ *  that path each time the current stop is opened. Opening the immediate next
+ *  stop (in-order wheel / click) catches the guide up one step; opening a
+ *  later star out of order (e.g. from the legend) leaves the guide where it
+ *  is. After the last stop it flies to where Captain Moroni will appear, and
+ *  as it loops the unlocked mark blooms in; halfway through that bloom the
+ *  guide peels off toward the cursor and hands the trail to CometTrail.
  *
  *  Every flight is a cubic Hermite curve whose end tangents are the actual
  *  velocities of the motion either side of it, played at linear time. That is
@@ -522,13 +522,15 @@ function GuideComet({
       handOff();
     }
 
-    /** If the open panel is further along the tour than the guide, fly
-     *  straight there. Returns true when a new flight was started. */
+    /** If the open panel is the next tour stop, fly there (in-order only).
+     *  Skipping ahead via the legend must not jump the guide. Returns true
+     *  when a new flight was started. */
     function tryCatchUp(now: number, depart: Vec): boolean {
       const active = activeIdRef.current;
       if (!active) return false;
       const activeIdx = route.indexOf(active);
-      if (activeIdx < 0 || activeIdx <= routeIndex) return false;
+      // Only the immediate next stop — never skip over unread tour stars.
+      if (activeIdx !== routeIndex + 1) return false;
       if (target === active) {
         routeIndex = activeIdx;
         return false;
@@ -571,7 +573,7 @@ function GuideComet({
         if (unlockedRef.current && !panelOpenRef.current) {
           if (beginSummon(now)) return;
         }
-        // Mid-flight redirect when the visitor jumps further ahead.
+        // Mid-flight redirect only when they open the next stop in order.
         if (tryCatchUp(now, [0, 0])) return;
         moveTo(...legAt(Math.min(1, t / legMs)));
         if (t >= legMs) {
@@ -595,7 +597,7 @@ function GuideComet({
         if (unlockedRef.current && !panelOpenRef.current) {
           if (beginSummon(now, orbitVel(c.x, c.y, t))) return;
         }
-        // Fast scroll / click-ahead: skip straight to the open star.
+        // In-order next stop only (wheel / sequential click).
         if (tryCatchUp(now, orbitVel(c.x, c.y, t))) return;
         // Advance when the visitor opens *this* stop. The flag stays set after
         // they close the panel so the last stop can still merge.

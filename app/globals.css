@@ -670,6 +670,8 @@ html.is-hidden #sky .star--interactive .sparkle {
   position: absolute;
   top: 1rem;
   right: 1.2rem;
+  /* Above .panel-scroll so scrolled body never eats the X hit target. */
+  z-index: 5;
   background: none;
   border: none;
   color: rgba(206, 220, 245, 0.7);
