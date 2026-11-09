@@ -42,17 +42,14 @@ function Panel({ content, onClose }: Props) {
   }, [content]);
 
   // Lazy-load panel prose so storyBodies stays out of the first JS chunk.
+  // Always re-read the module so HMR / copy edits are not stuck behind bodyCache.
   useEffect(() => {
     if (!display) return;
     const id = display.id;
     const cachedBody = bodyCache.get(id);
-    if (cachedBody !== undefined) {
-      setBody(cachedBody);
-      requestAnimationFrame(updateThumb);
-      return;
-    }
+    if (cachedBody !== undefined) setBody(cachedBody);
+    else setBody("");
     let cancelled = false;
-    setBody("");
     import("@/lib/storyBodies").then((m) => {
       if (cancelled) return;
       const next = m.BODIES[id] ?? display.body ?? "";

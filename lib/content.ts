@@ -193,6 +193,23 @@ export const STARS: StarContent[] = [
     connectsTo: ["cryodao"],
   },
   {
+    id: "spacebiostasis",
+    node: "n2",
+    section: "iic",
+    name: "Space Biostasis Coalition",
+    subtitle: "Biostasis for Spaceflight",
+    meta: "Head of Growth",
+    // body loaded from lib/storyBodies.ts
+
+    image: {
+      src: "/images/spacebiostasis.jpg",
+      alt: "Apollo astronaut on the lunar surface beside the American flag",
+      caption: "Astronaut",
+    },
+    link: { text: "spacebiostasis.org", url: "https://www.spacebiostasis.org" },
+    connectsTo: [],
+  },
+  {
     id: "mta",
     node: "n40",
     section: "iic",
@@ -214,8 +231,8 @@ export const STARS: StarContent[] = [
     node: "n36",
     section: "iic",
     name: "Worlds Without End",
-    subtitle: "Frontier VC",
-    meta: "Co-founder",
+    subtitle: "Head of Growth",
+    meta: "Frontier VC",
     // body loaded from lib/storyBodies.ts
 
     image: {
@@ -329,6 +346,7 @@ export const TOUR_ORDER: string[] = [
   "cryorat",
   "hydradao",
   "dowellbio",
+  "spacebiostasis",
 ];
 
 // ---- Footer -----------------------------------------------------------------
